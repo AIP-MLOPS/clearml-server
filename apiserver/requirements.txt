@@ -29,7 +29,8 @@ pyjwt>=2.4.0
 pymongo==4.10.1
 python-rapidjson>=0.6.3
 redis==5.2.1
-requests>=2.13.0
+# requests>=2.13.0
+requests<=2.31.0
 semantic_version>=2.8.3,<3
 setuptools>=78.1.1
 six
