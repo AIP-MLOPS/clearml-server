@@ -20,26 +20,52 @@ def update_proxy_config_for_dev(file_path):
         f.write(new_content)
 
 
-def replace_links(file_path, links):
-    """Replace the hard-coded links in the environment/base.ts"""
-    with open(file_path, 'r') as f:
-        content = f.read()
+# def replace_links(file_path, links):
+#     """Replace the hard-coded links in the environment/base.ts"""
+#     with open(file_path, 'r') as f:
+#         content = f.read()
 
-    # Replace links in BASE_ENV object
-    for key, value in links.items():
-        # Match the key names in the BASE_ENV object and replace them with the new values
-        content = re.sub(f'"{key}":\s*"[^\"]*"', f'"{key}": "{value}"', content)
+#     # Replace links in BASE_ENV object
+#     for key, value in links.items():
+#         # Match the key names in the BASE_ENV object and replace them with the new values
+#         content = re.sub(f'"{key}":\s*"[^\"]*"', f'"{key}": "{value}"', content)
 
-    # Also replace the branding URLs (logo, logoSmall, faviconUrl)
-    if 'faviconUrl' in links:
-        content = re.sub(r'"faviconUrl":\s*"[^\"]*"', f'"faviconUrl": "{links["faviconUrl"]}"', content)
-    if 'logo' in links:
-        content = re.sub(r'"logo":\s*"[^\"]*"', f'"logo": "{links["logo"]}"', content)
-    if 'logoSmall' in links:
-        content = re.sub(r'"logoSmall":\s*"[^\"]*"', f'"logoSmall": "{links["logoSmall"]}"', content)
+#     # Also replace the branding URLs (logo, logoSmall, faviconUrl)
+#     if 'faviconUrl' in links:
+#         content = re.sub(r'"faviconUrl":\s*"[^\"]*"', f'"faviconUrl": "{links["faviconUrl"]}"', content)
+#     if 'logo' in links:
+#         content = re.sub(r'"logo":\s*"[^\"]*"', f'"logo": "{links["logo"]}"', content)
+#     if 'logoSmall' in links:
+#         content = re.sub(r'"logoSmall":\s*"[^\"]*"', f'"logoSmall": "{links["logoSmall"]}"', content)
 
-    with open(file_path, 'w') as f:
-        f.write(content)
+#     with open(file_path, 'w') as f:
+#         f.write(content)
+
+def replace_links(links, repo_dir):
+    """Replace the hard-coded links in files specified in the links dictionary."""
+    for key, data in links.items():
+        url = data.get("url")
+        original = data.get("original")
+        files = data.get("files", [])
+
+        # Iterate over all files associated with the current link
+        for file_path in files:
+            # Ensure that file_path is resolved relative to the cloned repo
+            file_path = repo_dir / pathlib.Path(file_path)  # Convert to absolute path relative to repo_dir
+            
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+
+                # Replace the URL in the file
+                content = re.sub(re.escape(original), url, content)
+
+                # Write back the modified content to the file
+                with open(file_path, 'w') as f:
+                    f.write(content)
+                print(f"Updated {file_path} with new URL: {url}")
+            except FileNotFoundError:
+                print(f"Error: {file_path} not found. Skipping...")
 
 def replace_title_in_index_html(file_path, brand_name):
     """Replace the <title> in index.html with the provided brand name."""
@@ -103,8 +129,12 @@ def main():
             f.write(content)
 
     # Replace links in environment/base.ts
-    base_env_file = repo_dir / "src" / "environments" / "base.ts"
-    replace_links(base_env_file, links)
+    # base_env_file = repo_dir / "src" / "environments" / "base.ts"
+    # replace_links(base_env_file, links)
+    
+    # Replace links in files (dynamically checking for key with '_files')
+    replace_links(links, repo_dir)
+
 
     # Replace title in index.html
     index_html_path = repo_dir / "src" / "index.html"
