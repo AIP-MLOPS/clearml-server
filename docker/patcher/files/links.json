@@ -1,7 +1,68 @@
-
 {
-  "slackLink": "https://slack.aiplatform.com",
-  "docsLink": "https://docs.aiplatform.com",
-  "supportEmail": "support@aiplatform.com",
-  "platformYoutubeChannel": "https://www.youtube.com/c/aiplatform"
+  "github": {
+    "url": "https://github.com/AIP-MLOPS/aiplatform",
+    "original": "https://github.com/allegroai/clearml",
+    "files": [
+      "./src/app/webapp-common/login/login/login.component.html",
+      "./src/app/features/serving/empty-state/serving-empty-state.component.html",
+      "./src/environments/base.ts"
+    ]
+  },
+  "site": {
+    "url": "https://ai-platform.ir/",
+    "original": "https://clear.ml/",
+    "files": [
+      "./src/app/webapp-common/enterprise-visibility/resource-management/resource-management.component.html",
+      "./src/app/webapp-common/enterprise-visibility/data-management/data-management.component.html",
+      "./src/app/webapp-common/enterprise-visibility/interactive-sessions/interactive-sessions.component.html",
+      "./src/app/webapp-common/enterprise-visibility/security/security.component.html",
+      "./src/app/webapp-common/enterprise-visibility/genai/genai.component.html",
+      "./src/app/webapp-common/login/login/login.component.html",
+      "./src/app/webapp-common/clearml-applications/report-widgets/src/environments/base.ts",
+      "./src/webapp-common/clearml-applications/report-widgets/src/environments/base.ts"
+    ]
+  },
+  "documentation": {
+    "url": "https://ai-platform.ir/docs",
+    "original": "https://clear.ml/docs",
+    "files": ["./src/environments/base.ts"]
+  },
+  "slack": {
+    "url": "https://joinslack.ai-platform.ir",
+    "original": "https://joinslack.clear.ml",
+    "files": ["./src/environments/base.ts"]
+  },
+  "support_mail": {
+    "url": "support@ai-platform.ir",
+    "original": "support@clear.ml",
+    "files": ["./src/environments/base.ts"]
+  },
+  "youtube": {
+    "url": "https://www.youtube.com/c/AI-platform",
+    "original": "https://www.youtube.com/c/ClearML",
+    "files": ["./src/environments/base.ts"]
+  },
+  "ClearML": {
+    "url": "AI-Platform",
+    "original": "ClearML",
+    "files": [
+      "./src/app/webapp-common/login/login/login.component.html",
+      "./src/app/webapp-common/enterprise-visibility/resource-management/resource-management.component.html",
+      "./src/webapp-common/enterprise-visibility/interactive-sessions/interactive-sessions.component.html",
+      "./src/app/webapp-common/enterprise-visibility/security/security.component.html",
+      "./src/app/webapp-common/enterprise-visibility/genai/genai.component.html",
+      "./src/app/webapp-common/experiments/dumb/experiment-execution-source-code/experiment-execution-source-code.component.html",
+      "./src/app/webapp-common/experiments/experiments.component.ts",
+      "./src/app/webapp-common/layout/welcome-message/welcome-message.component.ts",
+      "./src/environments/base.ts"
+    ]
+  },
+  "github_alleg": {
+    "url": "https://ai-platform.org/docs",
+    "original": "https://clearml.org/docs",
+    "files": [
+      "./src/app/webapp-common/login/login/login.component.html",
+      "./src/environments/base.ts"
+    ]
+  }
 }
