@@ -33,3 +33,21 @@ class GetSupportedModesResponse(Base):
     sso = DictField([str, type(None)])
     sso_providers = ListField([dict])
     authenticated = BoolField(default=False)
+
+class CasdoorAuthenticateRequest(Base):
+    """Request model for Casdoor token authentication"""
+    token = StringField(required=True, help_text="Casdoor JWT token")
+
+
+class AuthenticatedUser(Base):
+    """User information returned after successful authentication"""
+    id = StringField(help_text="User ID")
+    name = StringField(help_text="User name")
+    company = StringField(help_text="User company ID")
+
+
+class CasdoorAuthenticateResponse(Base):
+    """Response model for Casdoor token authentication"""
+    success = BoolField(default=False, help_text="Authentication success status")
+    user = EmbeddedField(AuthenticatedUser, help_text="User information if successful")
+    error = StringField(help_text="Error message if authentication failed")

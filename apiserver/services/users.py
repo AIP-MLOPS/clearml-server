@@ -23,6 +23,9 @@ from apiserver.database.utils import parse_from_call
 from apiserver.service_repo import APICall, endpoint
 from apiserver.utilities.json import loads, dumps
 
+import traceback
+from datetime import datetime
+
 log = config.logger(__file__)
 project_bll = ProjectBLL()
 
@@ -99,32 +102,87 @@ def get_all(call: APICall, company_id, _):
 
 @endpoint("users.get_current_user")
 def get_current_user(call: APICall, company_id, _):
-    user_id = call.identity.user
+    log_file = "/tmp/get_current_user.log"
+    with open(log_file, "w") as f:
+            f.write(f"--- INPUT AT {datetime.utcnow().isoformat()} ---\n")
+            f.write(f"call.identity: {call.identity.to_dict()}\n\n")
 
-    projection = (
-        {"company.name"}.union(User.get_fields()).difference(User.get_exclude_fields())
-    )
-    res = User.get_many_with_join(
-        query=Q(id=user_id),
-        company=company_id,
-        override_projection=projection,
-    )
+    try:
+        user_id = call.identity.user
 
-    if not res:
-        raise errors.bad_request.InvalidUser("failed loading user")
-
-    user = res[0]
-    user["role"] = call.identity.role
-
-    resp = dict(
-        user=user, getting_started=config.get("apiserver.getting_started_info", None)
-    )
-    resp["settings"] = {
-        "max_download_items": int(
-            config.get("services.organization.download.max_download_items", 1000)
+        projection = (
+            {"company.name"}.union(User.get_fields()).difference(User.get_exclude_fields())
         )
-    }
-    call.result.data = resp
+        res = User.get_many_with_join(
+            query=Q(id=user_id),
+            company=company_id,
+            override_projection=projection,
+        )
+
+        if not res:
+            raise errors.bad_request.InvalidUser("failed loading user")
+
+        user = res[0]
+        user["role"] = call.identity.role
+
+        resp = dict(
+            user=user, getting_started=config.get("apiserver.getting_started_info", None)
+        )
+        resp["settings"] = {
+            "max_download_items": int(
+                config.get("services.organization.download.max_download_items", 1000)
+            )
+        }
+        call.result.data = resp
+    # --- LOGGING THE OUTPUT ---
+        # We use 'a' (append) to add to the same log file
+        with open(log_file, "a") as f:
+            f.write(f"--- SUCCESSFUL OUTPUT AT {datetime.utcnow().isoformat()} ---\n")
+            f.write(f"Response data: {resp}\n\n")
+
+        call.result.data = resp
+
+    except Exception as e:
+        # --- LOGGING THE ERROR ---
+        with open(log_file, "a") as f:
+            error_details = (
+                f"--- EXCEPTION AT {datetime.utcnow().isoformat()} ---\n"
+                f"Exception: {e}\n"
+                f"Traceback:\n{traceback.format_exc()}\n\n"
+            )
+            f.write(error_details)
+        # Re-raise the exception so the framework can handle it and return a 500 error
+        raise
+
+
+# @endpoint("users.get_current_user")
+# def get_current_user(call: APICall, company_id, _):
+#     user_id = call.identity.user
+
+#     projection = (
+#         {"company.name"}.union(User.get_fields()).difference(User.get_exclude_fields())
+#     )
+#     res = User.get_many_with_join(
+#         query=Q(id=user_id),
+#         company=company_id,
+#         override_projection=projection,
+#     )
+
+#     if not res:
+#         raise errors.bad_request.InvalidUser("failed loading user")
+
+#     user = res[0]
+#     user["role"] = call.identity.role
+
+#     resp = dict(
+#         user=user, getting_started=config.get("apiserver.getting_started_info", None)
+#     )
+#     resp["settings"] = {
+#         "max_download_items": int(
+#             config.get("services.organization.download.max_download_items", 1000)
+#         )
+#     }
+#     call.result.data = resp
 
 
 create_fields = {

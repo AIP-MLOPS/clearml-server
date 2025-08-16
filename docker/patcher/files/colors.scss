@@ -55,8 +55,8 @@
   --color-surface-container-lowest: #{mat.get-theme-color($theme, surface-container-lowest)};
   --color-surface-container-low: #{mat.get-theme-color($theme, surface-container-low)};
   --color-surface-container: #{mat.get-theme-color($theme, surface-container)};
-  // --color-surface-container-high: #{mat.get-theme-color($theme, surface-container-high)};
-  --color-surface-container-high: #f90000;
+  --color-surface-container-high: #{mat.get-theme-color($theme, surface-container-high)};
+  // --color-surface-container-high: #f90000;
 
   --color-surface-container-highest: #{mat.get-theme-color($theme, surface-container-highest)};
   --color-on-surface: #{mat.get-theme-color($theme, on-surface)};

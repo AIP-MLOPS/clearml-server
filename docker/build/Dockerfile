@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY docker/build/debian.sources /etc/apt/sources.list.d/debian.sources
 COPY docker/build/pip.conf /etc/pip.conf
+
+ARG GITHUB_TOKEN=
+# ARG CLEARML_WEB_GIT_URL=https://github.com/allegroai/clearml-web.git
 ARG CLEARML_WEB_GIT_URL=https://github.com/allegroai/clearml-web.git
 # ARG CLEARML_WEB_GIT_URL=https://github.com/AIP-MLOPS/aip-web.git
 
@@ -22,7 +25,9 @@ WORKDIR /opt
 
 # Clone the ClearML repo
 RUN apt-get update && apt-get install -y git
-RUN git clone ${CLEARML_WEB_GIT_URL} clearml-web
+# RUN git clone ${CLEARML_WEB_GIT_URL} clearml-web
+RUN git clone --branch clearml-web-login https://$GITHUB_TOKEN@github.com/AIP-MLOPS/tools.git clearml-web
+
 RUN mv clearml-web /opt/open-webapp
 
 # --- Copy the patcher folder (from docker/patcher) into the image ---
@@ -32,7 +37,7 @@ RUN python3 /opt/clearml/patcher/scripts/patch_repo.py \
   --logo-dir /opt/clearml/patcher/files/logos \
   --brand-name "aiplatform" \
   --links-json /opt/clearml/patcher/files/links.json \
-  --style-file /opt/clearml/patcher/files/colors.scss
+  --style-file /opt/clearml/patcher/files/clearml-palette.scss
 
 # --- Continue with webapp build ---
 COPY --chmod=744 docker/build/internal_files/build_webapp.sh /tmp/internal_files/
@@ -59,6 +64,23 @@ RUN /bin/bash -c '/tmp/internal_files/build_webapp.sh'
 
 # FROM python:3.9-slim-bookworm
 FROM docker.arvancloud.ir/library/python:3.9-slim-bookworm
+
+# Set environment variables
+ENV CASDOOR_ENDPOINT="https://iam.ai-lab.ir"
+ENV CASDOOR_CLIENT_ID=
+ENV CASDOOR_CLIENT_SECRET=
+ENV CASDOOR_ORG_NAME="organization_sharif"
+ENV CASDOOR_APP_NAME="application_panel"
+
+# COPY docker/build/casdoor_certificate.pem /app/casdoor_certificate.pem
+# RUN export CASDOOR_CERTIFICATE=$(cat /app/casdoor_certificate.pem) && \
+#     echo "CASDOOR_CERTIFICATE is set"
+# RUN echo $(cat /app/casdoor_certificate.pem)
+
+# RUN echo "certificate is  $CASDOOR_CERTIFICATE" 
+# ENV CASDOOR_CERTIFICATE = "-----BEGIN CERTIFICATE----- MIIE3TCCAsWgAwIBAgIDAeJAMA0GCSqGSIb3DQEBCwUAMCgxDjAMBgNVBAoTBWFk bWluMRYwFAYDVQQDEw1jZXJ0LWJ1aWx0LWluMB4XDTI1MDcyMTA2MzA0MFoXDTQ1 MDcyMTA2MzA0MFowKDEOMAwGA1UEChMFYWRtaW4xFjAUBgNVBAMTDWNlcnQtYnVp bHQtaW4wggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDNPOHzcM5jQzsQ 5MPitVbKckBhUVaJidlyZKdvAvMJSiNj7z1bmD4viiFRKiYdDgLs7ohQy/n6Dz+F 8aiIlT5SwWI/ERF/GfRqgr+dwIWixUrQBXdJ62O5vFDv36CnfXf9EvWoRYdCf/1U B87F8Bx+b9Sp75Q2+Z8/+xvZdQtOIBhMIFnBtJkFbEGFvGcR+GZX+SZpGAmzpjsH 2sTDpYc5bcWILY4mpQaihREKwB+KapSY+D74XAuXAjw5tqKgKuhSFGXx97NDmlYl pI+ZFdf42gvpyRw4rdLtgUkd8NDWd++BdkrxmOvAn94bGzHQmmbjlGxfP89oVEMK zPNPAgFabmW1EAsGripJroFreClzew4uU7bhWozlC3sj+aGo1KVu0M1JrY/zyxE0 EJvGF84oCxhrcH5nijVgbKR2MHcO7dVxbzgw/or24MBTCMSl6qc7NHW7gPYQosLv qLZCKdzT2QbkyiENp0UySVgF20O44NzwUj3zVAain6FGygyDV33hO1Lekqoj4o0P Y3vY/2DWY3g4NZuRG0o9E4FbYL0quwSWZdXw1iDCQvfGUER6CH+Pn2ICu66cnK9h A3GElh8A87bLXo3blbm99YpHtWCAlSeKjLj5RWjXGf4bYyh8SzbxqpKNspNatl5Q a9zOd9LG2GqlqPAGDpNXsmhsRhZ4QQIDAQABoxAwDjAMBgNVHRMBAf8EAjAAMA0G CSqGSIb3DQEBCwUAA4ICAQB1TU/kOeegk3OlC4DhC0h7+XfzgJRxV7LNigah+BzA HTj6AS9c5vDQQrLjz+mRSTNLeX2jZJCyp6x6kLcciJ5j2p9IAgMSXD5/vSTCoGh9 Y76av0PyQu6q/SOx7J5LB2VLqoBLPKJzz9/hMlGpnzywWkF6naYUd7YVSPpatKD/ 8SIZBQMS3OrFWcPqOhlt72d3ewPyyUeZvsWE7g3XbbrhESBQEgN1hbCbgRkiEZEv hRjfBywjGFo+TKJqX2mdWKxch5MEq1DwcbDqn7UCLVhWPmzjU+okBXxE4ZrT1xXa Wp3sxQyWQPdtVolY1amTh8Tzos92Jdztrxu9ZJnashTO9FBJRPD4osznWOAyvdVO GJ8oHQgN2KcYW+cAEWk6frI+hDzFt9aBnxDARPNg17mpBV6/z2Did4lRnjjb3cnl RMy4fvOZrFpA97oEEYSpchhX50Cjth4HMadIuk2RYoQaxpLZOYK7WPB1Dk6q33sf 2/BPI7oFfxSAhXTZcI3opGXBOTb6jSjHuuZZDdcDmUjLBLYxCTfpPL/FLQs24Ylf LYm7RYkKCpALClgcOtVbx+49yKQTjLBF2RkLpp9S5rjnVGpjfLzue2tbETbqL+df m9GxrMOM9/u6bkaU1zPEaOQZeJQ0FzYMS/1gEyEjW1WAotBxkz+VMcGh9STiO+Io 9w== -----END CERTIFICATE-----"
+
+
 COPY docker/build/debian.sources /etc/apt/sources.list.d/debian.sources
 COPY docker/build/pip.conf /etc/pip.conf
 COPY --chmod=744 docker/build/internal_files/entrypoint.sh /opt/clearml/

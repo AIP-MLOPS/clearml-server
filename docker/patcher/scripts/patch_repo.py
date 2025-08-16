@@ -141,7 +141,8 @@ def main():
     replace_title_in_index_html(index_html_path, args.brand_name)
 
     # Hardcoded paste directory relative to the cloned repo
-    paste_dir = repo_dir / "src" / "app" / "webapp-common" / "styles" / "customizations" / "colors.scss"
+    # paste_dir = repo_dir / "src" / "app" / "webapp-common" / "styles" / "customizations" / "colors.scss"
+    paste_dir = repo_dir / "src" / "app" / "webapp-common" / "styles" / "clearml-palette.scss"
 
     # Copy the custom style file to the hardcoded target directory
     shutil.copy(args.style_file, paste_dir)

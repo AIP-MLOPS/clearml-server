@@ -17,6 +17,44 @@ from .fixed_user import FixedUser
 from .identity import Identity
 from .payload import Payload, Token, Basic, AuthType
 
+try:
+    from .casdoor_auth import casdoor_auth
+    CASDOOR_AVAILABLE = True
+except ImportError:
+    CASDOOR_AVAILABLE = False
+    casdoor_handler = None
+
+def extract_token_from_request(call):
+    """
+    Extract JWT token from request headers or cookies
+    
+    Args:
+        call: The API call object containing request info
+        
+    Returns:
+        str: JWT token if found, None otherwise
+    """
+    # First try Authorization header
+    auth_header = getattr(call, 'headers', {}).get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        return auth_header[7:]  # Remove 'Bearer ' prefix
+    
+    # Try cookie
+    cookies = getattr(call, 'cookies', {})
+    
+    # Check for Casdoor token cookie
+    casdoor_token = cookies.get('clearml-token-k8s')
+    if casdoor_token:
+        return casdoor_token
+    
+    # Check for regular ClearML token cookie  
+    clearml_token = cookies.get('clearml_token_basic')
+    if clearml_token:
+        return clearml_token
+    
+    return None
+
+
 log = config.logger(__file__)
 entity_keys = set(get_options(Entities))
 verify_user_tokens = config.get("apiserver.auth.verify_user_tokens", True)
@@ -32,16 +70,104 @@ def get_auth_func(auth_type):
     raise errors.unauthorized.BadAuthType()
 
 
+# def authorize_token(jwt_token, service, action, call):
+#     """Validate token against service/endpoint and requests data (dicts).
+#     Returns a parsed token object (auth payload)
+#     """
+#     call_info = {"ip": call.real_ip}
+
+#     def log_error(msg):
+#         info = ", ".join(f"{k}={v}" for k, v in call_info.items())
+#         log.error(f"{msg} Call info: {info}")
+
+#     # First, try Casdoor authentication if available and token looks like Casdoor token
+#     if CASDOOR_AVAILABLE and casdoor_auth and casdoor_auth.is_enabled():
+#         try:
+#             log.info("Attempting Casdoor authentication")
+#             casdoor_payload = casdoor_auth.authenticate_user(jwt_token)
+#             if casdoor_payload:
+#                 log.info(f"User authenticated via Casdoor: {casdoor_payload.identity.user_name}")
+#                 return casdoor_payload
+#         except Exception as e:
+#             log.error(f"Casdoor authentication error: {e}")
+
+
+#             # Fall through to try regular ClearML token authentication
+#     # if CASDOOR_AVAILABLE and casdoor_auth and casdoor_auth.is_enabled():
+#     #     if casdoor_handler.is_casdoor_token(jwt_token):
+#     #         try:
+#     #             casdoor_payload = casdoor_handler.authenticate_token(jwt_token)
+#     #             if casdoor_payload:
+#     #                 log.info(f"User authenticated via Casdoor: {casdoor_payload.identity.user_name}")
+#     #                 return casdoor_payload
+#     #         except Exception as e:
+#     #             log.error(f"Casdoor authentication error: {e}")
+#     #             # Fall through to try regular ClearML token authentication
+
+#     try:
+#         token = Token.from_encoded_token(jwt_token)
+#         if is_token_revoked(token):
+#             raise errors.unauthorized.InvalidToken("revoked token")
+#         return token
+#     except jwt.exceptions.InvalidKeyError as ex:
+#         log_error("Failed parsing token.")
+#         raise errors.unauthorized.InvalidToken(
+#             "jwt invalid key error", reason=ex.args[0]
+#         )
+#     except jwt.InvalidTokenError as ex:
+#         log_error("Failed parsing token.")
+#         raise errors.unauthorized.InvalidToken("invalid jwt token", reason=ex.args[0])
+#     except ValueError as ex:
+#         log_error(f"Failed while processing token: {str(ex.args[0])}.")
+#         raise errors.unauthorized.InvalidToken(
+#             "failed processing token", reason=ex.args[0]
+#         )
+#     except Exception:
+#         log_error("Failed processing token.")
+#         raise
+
+# Update your authorize_token function to use this:
 def authorize_token(jwt_token, service, action, call):
     """Validate token against service/endpoint and requests data (dicts).
     Returns a parsed token object (auth payload)
     """
-    call_info = {"ip": call.real_ip}
+    log_file = "/tmp/auth_trace.log"
+    
+    # Helper to write to the log file
+    def write_log(message):
+        # Use 'a' (append) to add to the file
+        with open(log_file, "a") as f:
+            f.write(f"[{datetime.utcnow().isoformat()}] {message}\n")
 
+    # Use 'w' (write) to start a fresh log for each API call
+    with open(log_file, "w") as f:
+        f.write(f"--- NEW AUTHORIZATION TRACE FOR REQUEST {call.id} ---\n")
+        
+    call_info = {"ip": call.real_ip}
+    
     def log_error(msg):
         info = ", ".join(f"{k}={v}" for k, v in call_info.items())
         log.error(f"{msg} Call info: {info}")
 
+    # If no token provided directly, try to extract from request
+    if not jwt_token:
+        jwt_token = extract_token_from_request(call)
+        if not jwt_token:
+            raise errors.unauthorized.MissingRequiredFields(field="authorization token")
+
+    # First, try Casdoor authentication if available
+    if CASDOOR_AVAILABLE and casdoor_auth and casdoor_auth.is_enabled():
+        try:
+            log.info("Attempting Casdoor authentication")
+            casdoor_payload = casdoor_auth.authenticate_user(jwt_token)
+            if casdoor_payload:
+                log.info(f"User authenticated via Casdoor: {casdoor_payload.identity.user_name}")
+                return casdoor_payload
+        except Exception as e:
+            log.error(f"Casdoor authentication error: {e}")
+            # Fall through to try regular ClearML token authentication
+
+    # Regular ClearML token authentication
     try:
         token = Token.from_encoded_token(jwt_token)
         if is_token_revoked(token):
@@ -63,7 +189,6 @@ def authorize_token(jwt_token, service, action, call):
     except Exception:
         log_error("Failed processing token.")
         raise
-
 
 def authorize_credentials(auth_data, service, action, call):
     """Validate credentials against service/action and request data (dicts).
@@ -178,3 +303,25 @@ def revoke_auth_token(token: Token):
 
     redis.zadd(_revoked_tokens_key, {token.session_id: expiration_timestamp})
     redis.zremrangebyscore(_revoked_tokens_key, min=0, max=timestamp_now)
+
+def is_casdoor_token(jwt_token):
+    """
+    Determine if a JWT token is from Casdoor based on its characteristics
+    """
+    try:
+        # Decode without verification to check the structure
+        decoded = jwt.decode(jwt_token, options={"verify_signature": False})
+        
+        # Check for Casdoor-specific claims
+        casdoor_indicators = [
+            decoded.get('iss') == 'https://iam.ai-lab.ir',  # Your Casdoor issuer
+            'displayName' in decoded,  # Casdoor-specific claim
+            'tokenType' in decoded,    # Casdoor-specific claim
+            decoded.get('aud') and 'org-built-in' in str(decoded.get('aud')),  # Casdoor audience pattern
+        ]
+        
+        # If any Casdoor indicator is present, treat as Casdoor token
+        return any(casdoor_indicators)
+        
+    except Exception:
+        return False
